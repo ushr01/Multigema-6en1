@@ -38,12 +38,17 @@ jobs:
 
           rm -rf /tmp/multigema_extract
           mkdir -p /tmp/multigema_extract
+
           unzip -o multigema.zip -d /tmp/multigema_extract
 
-          ROOT_DIR="$(find /tmp/multigema_extract -mindepth 1 -maxdepth 2 -type d -name multigema -print -quit)"
-          if [ -z "$ROOT_DIR" ]; then
-            echo "ERROR: no encontré la carpeta multigema dentro del ZIP"
-            find /tmp/multigema_extract -maxdepth 3 -print
+          echo "Estructura extraída:"
+          find /tmp/multigema_extract -maxdepth 3 -print
+
+          ROOT_DIR="/tmp/multigema_extract/multigema"
+
+          if [ ! -d "$ROOT_DIR" ]; then
+            echo "ERROR: no encontré la carpeta multigema en la raíz del ZIP"
+            find /tmp/multigema_extract -maxdepth 5 -print
             exit 1
           fi
 
@@ -63,6 +68,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git checkout -B "${GITHUB_REF_NAME:-main}"
           git add -A
 
