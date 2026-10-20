@@ -43,5 +43,5 @@ jobs:
             echo "No hay cambios para hacer commit"
             exit 0
           fi
-          git commit -m "Extrae proyecto multigema"
+          git commit -m "Extrae proyecto multigema.zip"
           git push origin HEAD:"${GITHUB_REF_NAME:-main}"
