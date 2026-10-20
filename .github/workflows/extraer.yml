@@ -1,0 +1,70 @@
+name: Extraer proyecto
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  extraer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PWD: $(pwd)"
+          ls -la
+
+          if [ ! -f multigema.zip ]; then
+            echo "ERROR: falta multigema.zip en la raíz del repositorio"
+            exit 1
+          fi
+
+          echo "Contenido del ZIP:"
+          unzip -l multigema.zip | head -n 30
+
+      - name: Extraer proyecto
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf /tmp/multigema_extract
+          mkdir -p /tmp/multigema_extract
+          unzip -o multigema.zip -d /tmp/multigema_extract
+
+          ROOT_DIR="$(find /tmp/multigema_extract -mindepth 1 -maxdepth 2 -type d -name multigema -print -quit)"
+          if [ -z "$ROOT_DIR" ]; then
+            echo "ERROR: no encontré la carpeta multigema dentro del ZIP"
+            find /tmp/multigema_extract -maxdepth 3 -print
+            exit 1
+          fi
+
+          echo "Carpeta detectada: $ROOT_DIR"
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -a "$ROOT_DIR"/. .
+
+      - name: Commit y push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout -B "${GITHUB_REF_NAME:-main}"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios para hacer commit"
+            exit 0
+          fi
+
+          git commit -m "Extrae proyecto multigema.zip"
+          git push origin HEAD:"${GITHUB_REF_NAME:-main}"
