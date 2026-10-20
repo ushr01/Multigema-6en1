@@ -1,28 +1,47 @@
 name: Extraer proyecto
-on: workflow_dispatch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
 permissions:
   contents: write
+
 jobs:
   extraer:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extraer el zip
+        with:
+          fetch-depth: 0
+
+      - name: Verificar zip
         run: |
+          pwd
           ls -la
-          ZIP=$(ls *.zip | head -n 1)
-          echo "Usando: $ZIP"
-          mkdir tmp_extract
-          unzip -o "$ZIP" -d tmp_extract
-          if [ "$(ls tmp_extract | wc -l)" = "1" ] && [ -d "tmp_extract/$(ls tmp_extract)" ]; then
-            cp -r tmp_extract/*/. .
+          test -f multigema.zip || { echo "Falta multigema.zip en la raíz del repo"; exit 1; }
+
+      - name: Extraer proyecto
+        run: |
+          unzip -o multigema.zip
+          if [ -d multigema ]; then
+            cp -r multigema/. .
+            rm -rf multigema
           else
-            cp -r tmp_extract/. .
+            echo "La carpeta multigema no existe dentro del zip"
+            exit 1
           fi
-          rm -rf tmp_extract
-      - name: Subir los cambios
+
+      - name: Commit y push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+          git checkout -B "${GITHUB_REF_NAME:-main}"
           git add -A
-          git diff --cached --quiet && echo "No hay cambios" || (git commit -m "Extrae proyecto multigema" && git push)
+          if git diff --cached --quiet; then
+            echo "No hay cambios para hacer commit"
+            exit 0
+          fi
+          git commit -m "Extrae proyecto multigema"
+          git push origin HEAD:"${GITHUB_REF_NAME:-main}"
